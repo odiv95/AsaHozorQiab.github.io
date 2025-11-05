@@ -2,11 +2,22 @@
 <html lang="fa" dir="rtl">
 <head>
     <meta name="theme-color" content="#4361ee">
+    <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
 <meta name="apple-mobile-web-app-title" content="حضور و غیاب">
-<link rel="apple-touch-icon" href="Images/LogoHozor256.png">
-<link rel="manifest" href="manifest.json">
+<!-- آیکون‌های iOS -->
+<link rel="apple-touch-icon" href="images/yellow.png">
+<link rel="apple-touch-icon" sizes="152x152" href="Images/LogoHozor256.png">
+<link rel="apple-touch-icon" sizes="180x180" href="Images/LogoHozor256.png">
+<link rel="apple-touch-icon" sizes="167x167" href="Images/LogoHozor256.png">
+<link rel="apple-touch-startup-image" href="Images/LogoHozor256.png">
+<!-- تم رنگی -->
+<meta name="msapplication-TileColor" content="#4361ee">
+<meta name="msapplication-TileImage" content="Images/LogoHozor256.png">
+
+<!-- مانفیست -->
+<link rel="manifest" href="manifest.json" crossorigin="use-credentials">
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>نرم افزار حضور و غیاب آساگیتی</title>
@@ -35,6 +46,7 @@
             --radius: 12px;
         }
 
+
          @font-face {
   font-family: 'AsaGity';
   src: url('fonts/yekan-font/yekan-regular.woff') format('woff'),
@@ -50,6 +62,16 @@
   font-weight: normal;
   font-style: normal;
   font-display: swap;
+}
+
+         @font-face {
+  font-family: 'AsaGity2';
+src: url('fonts/vazir-font-v18.0.0/Farsi-Digits/Vazir-FD.woff') format('woff'),
+    url('fonts/vazir-font-v18.0.0/Farsi-Digits/Vazir-FD.woff2') format('woff2');
+  font-weight: normal;
+  font-style: normal;
+  font-display: swap;
+  
 }
 
          @font-face {
@@ -79,6 +101,15 @@ url('fonts/samim-font-v2.0.1/Samim-Bold.woff2') format('woff2');
 }
 
          @font-face {
+  font-family: 'AsaGity3';
+src: url('fonts/samim-font-v2.0.1/Farsi-Digits/Samim-FD.woff') format('woff'),
+url('fonts/samim-font-v2.0.1/Farsi-Digits/Samim-FD.woff2') format('woff2');
+  font-weight: normal;
+  font-style: normal;
+  font-display: swap;
+}
+
+         @font-face {
   font-family: 'AsaGity4';
 src: url('fonts/tanha-font-v0.9/Tanha.woff') format('woff'),
 url('fonts/tanha-font-v0.9/Tanha.woff2') format('woff2');
@@ -87,9 +118,28 @@ url('fonts/tanha-font-v0.9/Tanha.woff2') format('woff2');
   font-display: swap;
 }
 
+
+ @font-face {
+  font-family: 'AsaGity4';
+src: url('fonts/tanha-font-v0.9/Farsi-Digits/Tanha-FD.woff') format('woff'),
+url('fonts/tanha-font-v0.9/Farsi-Digits/Tanha-FD.woff2') format('woff2');
+  font-weight: normal;
+  font-style: normal;
+  font-display: swap;
+}
+
          @font-face {
   font-family: 'AsaGity5';
 src: url('fonts/shabnam-font-v2.4.0/Shabnam-Light.woff') format('woff');
+  font-weight: normal;
+  font-style: normal;
+  font-display: swap;
+}
+
+         @font-face {
+  font-family: 'AsaGity5';
+src: url('fonts/shabnam-font-v2.4.0/Farsi-Digits/Shabnam-FD.woff') format('woff'),
+url('fonts/shabnam-font-v2.4.0/Farsi-Digits/Shabnam-FD.woff2') format('woff2');
   font-weight: normal;
   font-style: normal;
   font-display: swap;
@@ -575,6 +625,54 @@ body.font-loading {
 
 }
 
+/* استایل برای حالت PWA */
+body.pwa-installed header {
+    padding-top: env(safe-area-inset-top);
+}
+
+/* استایل برای راهنمای نصب */
+@keyframes slideUp {
+    from {
+        transform: translateY(100px);
+        opacity: 0;
+    }
+    to {
+        transform: translateY(0);
+        opacity: 1;
+    }
+}
+
+/* بهبود نمایش در حالت PWA */
+@media all and (display-mode: standalone) {
+    body {
+        -webkit-touch-callout: none;
+        -webkit-user-select: none;
+        user-select: none;
+    }
+    
+    .main-card {
+        padding-top: 10px;
+    }
+}
+
+/* استایل برای دکمه نصب */
+#installButton {
+    transition: all 0.3s ease;
+}
+
+#installButton:hover {
+    transform: scale(1.05);
+    box-shadow: 0 4px 12px rgba(255, 255, 255, 0.3);
+}
+
+#closeInstall {
+    transition: opacity 0.3s ease;
+}
+
+#closeInstall:hover {
+    opacity: 0.7;
+}
+
 /* استایل برای نمونه‌های نمایش */
 #currentCurrencyExample, #currentTimeExample {
     color: var(--primary);
@@ -884,6 +982,40 @@ table th {
     }
 }
 
+.install-step {
+    margin-bottom: 20px;
+}
+
+.install-step h4 {
+    color: var(--primary);
+    margin-bottom: 15px;
+    padding-bottom: 8px;
+    border-bottom: 2px solid var(--border);
+}
+
+.step-content {
+    display: flex;
+    align-items: center;
+    margin-bottom: 10px;
+    padding: 8px;
+    background: var(--background);
+    border-radius: 8px;
+}
+
+.step {
+    background: var(--primary);
+    color: white;
+    width: 30px;
+    height: 30px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin-left: 10px;
+    font-weight: bold;
+    flex-shrink: 0;
+}
+
 /* استایل برای دکمه‌های مودال تایید */
 #confirmExitCancel {
     background: var(--card-bg);
@@ -1090,7 +1222,6 @@ table th {
             </button>
         </div>
     </div>
-
     <!-- مودال تنظیمات -->
     <div class="modal" id="settingsModal">
         <div class="modal-content">
@@ -1303,6 +1434,97 @@ async checkWifiAndAutoCheckInOut() {
         }
     } catch (error) {
         console.log('خطا در تشخیص وای‌فای:', error);
+    }
+}
+
+setupPWAInstallPrompt() {
+    // تشخیص قابلیت نصب
+    let deferredPrompt;
+    
+    window.addEventListener('beforeinstallprompt', (e) => {
+        e.preventDefault();
+        deferredPrompt = e;
+        this.showInstallPromotion();
+    });
+    
+    window.addEventListener('appinstalled', () => {
+        this.showNotification('✅ برنامه با موفقیت نصب شد!', 'success');
+        deferredPrompt = null;
+    });
+    
+    // نمایش راهنمای نصب اگر مرورگر از PWA پشتیبانی نمی‌کند
+    if (!deferredPrompt && !window.matchMedia('(display-mode: standalone)').matches) {
+        setTimeout(() => {
+            this.showInstallGuide();
+        }, 3000);
+    }
+}
+
+// نمایش راهنمای نصب
+showInstallPromotion() {
+    const installPromotion = document.createElement('div');
+    installPromotion.id = 'installPromotion';
+    installPromotion.style.cssText = `
+        position: fixed;
+        bottom: 20px;
+        left: 20px;
+        right: 20px;
+        background: linear-gradient(135deg, var(--primary), var(--secondary));
+        color: white;
+        padding: 15px;
+        border-radius: var(--radius);
+        box-shadow: var(--shadow);
+        z-index: 1000;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        animation: slideUp 0.5s ease-out;
+    `;
+    
+    installPromotion.innerHTML = `
+        <div>
+            <strong>📱 نصب برنامه</strong>
+            <div style="font-size: 12px; margin-top: 5px;">برای دسترسی سریع‌تر، برنامه را نصب کنید</div>
+        </div>
+        <button id="installButton" style="background: white; color: var(--primary); border: none; padding: 8px 16px; border-radius: 20px; font-weight: bold; cursor: pointer;">
+            نصب
+        </button>
+        <button id="closeInstall" style="background: none; border: none; color: white; font-size: 18px; cursor: pointer; margin-right: 10px;">
+            ✕
+        </button>
+    `;
+    
+    document.body.appendChild(installPromotion);
+    
+    document.getElementById('installButton').addEventListener('click', () => {
+        this.installPWA();
+    });
+    
+    document.getElementById('closeInstall').addEventListener('click', () => {
+        installPromotion.remove();
+    });
+}
+
+// نصب PWA
+installPWA() {
+    if (window.deferredPrompt) {
+        window.deferredPrompt.prompt();
+        window.deferredPrompt.userChoice.then((choiceResult) => {
+            if (choiceResult.outcome === 'accepted') {
+                console.log('User accepted the install prompt');
+            } else {
+                console.log('User dismissed the install prompt');
+            }
+            window.deferredPrompt = null;
+        });
+    }
+}
+
+// بررسی اینکه آیا اپ نصب شده است
+checkIfPWAInstalled() {
+    if (window.matchMedia('(display-mode: standalone)').matches) {
+        console.log('اپ در حالت standalone اجرا شده است');
+        document.body.classList.add('pwa-installed');
     }
 }
 
@@ -1814,6 +2036,10 @@ init() {
     this.createInstallGuideModal();
     this.createConfirmExitModal();
     this.createConfirmClearAllModal();
+    
+    // راه‌اندازی PWA
+    this.setupPWAInstallPrompt();
+    this.checkIfPWAInstalled();
     
     this.manageStorage();
     
@@ -3182,7 +3408,6 @@ getCurrentJalaliDate() {
     };
 }
             
-// اضافه کردن این متدها به کلاس AttendanceApp
 
 // مدیریت ذخیره‌سازی و پاک‌سازی داده‌ها
 manageStorage() {
@@ -3389,6 +3614,7 @@ resetApplicationState() {
     console.log('✅ وضعیت برنامه با موفقیت ریست شد');
 }
 
+// بهبود راهنمای نصب
 createInstallGuideModal() {
     const modal = document.createElement('div');
     modal.className = 'modal';
@@ -3396,27 +3622,54 @@ createInstallGuideModal() {
     modal.innerHTML = `
         <div class="modal-content" style="max-width: 500px;">
             <div class="modal-header">
-                <h2 class="modal-title">راهنمای نصب روی گوشی</h2>
+                <h2 class="modal-title">📱 راهنمای نصب روی گوشی</h2>
                 <button class="close-modal">&times;</button>
             </div>
             <div style="padding: 20px;">
-                <h3>📱 برای اندروید (Chrome):</h3>
-                <ol style="text-align: right; margin-right: 20px;">
-                    <li>منوی Chrome (سه نقطه) را باز کنید</li>
-                    <li>گزینه "Add to Home screen" را انتخاب کنید</li>
-                    <li>روی "Add" کلیک کنید</li>
-                </ol>
-                
-                <h3>📱 برای آیفون (Safari):</h3>
-                <ol style="text-align: right; margin-right: 20px;">
-                    <li>آیکون Share (مربع با فلش) را بزنید</li>
-                    <li>گزینه "Add to Home Screen" را انتخاب کنید</li>
-                    <li>روی "Add" کلیک کنید</li>
-                </ol>
-                
-                <div style="background: #e3f2fd; padding: 15px; border-radius: 8px; margin-top: 20px;">
-                    <strong>💡 نکته:</strong> پس از نصب، می‌توانید مانند یک اپلیکیشن عادی از برنامه استفاده کنید و تمام داده‌ها روی گوشی شما ذخیره می‌شوند.
+                <div style="text-align: center; margin-bottom: 20px;">
+                    <div style="font-size: 48px; margin-bottom: 10px;">📲</div>
+                    <h3 style="color: var(--primary);">نصب برنامه روی صفحه اصلی</h3>
                 </div>
+                
+                <div class="install-step">
+                    <h4>📱 برای اندروید (Chrome):</h4>
+                    <div class="step-content">
+                        <div class="step">۱</div>
+                        <div>منوی Chrome (<strong>سه نقطه</strong>) را باز کنید</div>
+                    </div>
+                    <div class="step-content">
+                        <div class="step">۲</div>
+                        <div>گزینه "<strong>Add to Home screen</strong>" را انتخاب کنید</div>
+                    </div>
+                    <div class="step-content">
+                        <div class="step">۳</div>
+                        <div>روی "<strong>Add</strong>" کلیک کنید</div>
+                    </div>
+                </div>
+                
+                <div class="install-step" style="margin-top: 25px;">
+                    <h4>📱 برای آیفون (Safari):</h4>
+                    <div class="step-content">
+                        <div class="step">۱</div>
+                        <div>آیکون <strong>Share</strong> (مربع با فلش بالا) را بزنید</div>
+                    </div>
+                    <div class="step-content">
+                        <div class="step">۲</div>
+                        <div>گزینه "<strong>Add to Home Screen</strong>" را انتخاب کنید</div>
+                    </div>
+                    <div class="step-content">
+                        <div class="step">۳</div>
+                        <div>روی "<strong>Add</strong>" کلیک کنید</div>
+                    </div>
+                </div>
+                
+                <div style="background: #e3f2fd; padding: 15px; border-radius: 8px; margin-top: 20px; text-align: center;">
+                    <strong>💡 نکته:</strong> پس از نصب، می‌توانید مانند یک اپلیکیشن عادی از برنامه استفاده کنید
+                </div>
+                
+                <button class="btn btn-primary" style="width: 100%; margin-top: 20px;" onclick="this.closest('.modal').style.display='none'">
+                    <i class="fas fa-check"></i> متوجه شدم
+                </button>
             </div>
         </div>
     `;
@@ -3627,6 +3880,71 @@ loadArchiveData() {
             window.attendanceApp = new AttendanceApp();
         });
     </script>
+
+    <script>
+// ایجاد آیکون داینامیک اگر فایل آیکون وجود ندارد
+function createDynamicIcon() {
+    const canvas = document.createElement('canvas');
+    canvas.width = 512;
+    canvas.height = 512;
+    const ctx = canvas.getContext('2d');
+    
+    // پس‌زمینه
+    ctx.fillStyle = '#4361ee';
+    ctx.fillRect(0, 0, 512, 512);
+    
+    // متن
+    ctx.fillStyle = '#ffffff';
+    ctx.font = 'bold 200px Arial';
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.fillText('📱', 256, 256);
+    
+    // تبدیل به داده URL
+    return canvas.toDataURL('image/png');
+}
+
+// بررسی وجود آیکون
+function checkIconExists() {
+    const img = new Image();
+    img.onload = function() {
+        console.log('آیکون موجود است');
+    };
+    img.onerror = function() {
+        console.log('آیکون موجود نیست، استفاده از آیکون داینامیک');
+        const dynamicIcon = createDynamicIcon();
+        // به‌روزرسانی مانفیست با آیکون داینامیک
+        updateManifestWithDynamicIcon(dynamicIcon);
+    };
+    img.src = 'images/yellow.png';
+}
+
+// به‌روزرسانی مانفیست با آیکون داینامیک
+function updateManifestWithDynamicIcon(iconDataUrl) {
+    const manifest = {
+        "name": "نرم افزار حضور و غیاب",
+        "short_name": "حضور و غیاب",
+        "start_url": "./",
+        "display": "standalone",
+        "background_color": "#f5f7fb",
+        "theme_color": "#4361ee",
+        "icons": [
+            {
+                "src": iconDataUrl,
+                "sizes": "512x512",
+                "type": "image/png"
+            }
+        ]
+    };
+    
+    const manifestBlob = new Blob([JSON.stringify(manifest)], {type: 'application/json'});
+    const manifestURL = URL.createObjectURL(manifestBlob);
+    document.querySelector('link[rel="manifest"]').href = manifestURL;
+}
+
+// اجرای بررسی هنگام لود صفحه
+document.addEventListener('DOMContentLoaded', checkIconExists);
+</script>
 
     <script>
 // ثبت Service Worker
