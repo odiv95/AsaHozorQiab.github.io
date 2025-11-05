@@ -9,12 +9,12 @@
   "orientation": "portrait",
   "icons": [
     {
-      "src": "images/yellow.png",
+      "src": "Images/LogoHozor192.png",
       "sizes": "192x192",
       "type": "image/png"
     },
     {
-      "src": "images/yellow.png",
+      "src": "Images/LogoHozor512.png",
       "sizes": "512x512",
       "type": "image/png"
     }
