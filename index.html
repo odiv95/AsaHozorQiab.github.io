@@ -17,12 +17,12 @@
 <meta name="msapplication-TileImage" content="Images/LogoHozor256.png">
 
 <!-- مانفیست -->
-<link rel="manifest" href="manifest.json" crossorigin="use-credentials">
+    <link rel="manifest" href="manifest.json" crossorigin="use-credentials">
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>نرم افزار حضور و غیاب آساگیتی</title>
     <!-- در بخش head، بعد از تگ title این خط را اضافه کنید -->
-<link rel="icon" href="Images/LogoHozor256.png" type="image/png">
+    <link rel="icon" href="Images/LogoHozor256.png" type="image/png">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
     <style>
@@ -7599,6 +7599,14 @@ function registerServiceWorker() {
         console.log('SW registration failed: ', registrationError);
         // ادامه کار بدون Service Worker
       });
+
+        navigator.serviceWorker.addEventListener('message', event => {
+    if (event.data && event.data.type === 'SW_UPDATED') {
+      // نسخه جدید موجود است، صفحه را ری‌لود کن
+      console.log('New SW version detected, reloading page...');
+      window.location.reload(true);
+    }
+  });
   }
 }
 
