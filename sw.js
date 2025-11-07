@@ -3,6 +3,7 @@ const APP_VERSION = '1.7.8'; // ← هر بار تغییر دادید، فقط �
 
 // Cache Name بر اساس نسخه برنامه
 const CACHE_NAME = `attendance-app-cache-v${APP_VERSION}`;
+const STATIC_CACHE = `attendance-app-static-v${APP_VERSION}`; 
 // فایل‌هایی که باید cache شوند
 const STATIC_FILES = [
     './',
@@ -164,4 +165,5 @@ self.addEventListener('message', event => {
         self.skipWaiting();
     }
 });
+
 
