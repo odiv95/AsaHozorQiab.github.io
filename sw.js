@@ -1,5 +1,5 @@
 // نسخه برنامه
-const APP_VERSION = '1.7.6'; // ← هر بار تغییر دادید، فقط این عدد را عوض کنید
+const APP_VERSION = '1.7.8'; // ← هر بار تغییر دادید، فقط این عدد را عوض کنید
 
 // Cache Name بر اساس نسخه برنامه
 const CACHE_NAME = `attendance-app-cache-v${APP_VERSION}`;
@@ -164,3 +164,4 @@ self.addEventListener('message', event => {
         self.skipWaiting();
     }
 });
+
