@@ -1,21 +1,8 @@
 // نسخه برنامه
-const APP_VERSION = '1.7.11'; // ← هر بار تغییر دادید، فقط این عدد را عوض کنید
+const APP_VERSION = '1.7.12'; // ← هر بار تغییر دادید، فقط این عدد را عوض کنید
 
 // Cache Name بر اساس نسخه برنامه
 const CACHE_NAME = `attendance-app-cache-v${APP_VERSION}`;
-const STATIC_CACHE = `attendance-app-static-v${APP_VERSION}`; 
-// فایل‌هایی که باید cache شوند
-const STATIC_FILES = [
-    './',
-    './index.html',
-    './manifest.json',
-    './browserconfig.xml',
-    'Images/LogoHozor192.png',
-    'Images/LogoHozor512.png',
-    'Images/LogoHozor256.png',
-    'https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css',
-    'https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js'
-];
 
 const ASSETS = [
   '/',               // صفحه اصلی
@@ -165,6 +152,7 @@ self.addEventListener('message', event => {
         self.skipWaiting();
     }
 });
+
 
 
 
