@@ -1,5 +1,4 @@
-
-const APP_VERSION = '1.7.13'; // ← فقط این عدد رو موقع آپدیت تغییر بده
+const APP_VERSION = '1.7.14'; // ← فقط این عدد رو موقع آپدیت تغییر بده
 
 function toPersianDigits(num) {
     return num.toString().replace(/[0-9]/g, d => '۰۱۲۳۴۵۶۷۸۹'[d]);
@@ -13525,4 +13524,5 @@ document.addEventListener('DOMContentLoaded', () => {
     });
         const versionEl = document.getElementById('appVersion');
     if (versionEl) versionEl.textContent = APP_VERSION;
+
 });
