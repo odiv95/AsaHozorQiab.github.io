@@ -1,5 +1,5 @@
 
-const APP_VERSION = '1.7.15'; // ← فقط این عدد رو موقع آپدیت تغییر بده
+const APP_VERSION = '1.7.16'; // ← فقط این عدد رو موقع آپدیت تغییر بده
 
 function toPersianDigits(num) {
     return num.toString().replace(/[0-9]/g, d => '۰۱۲۳۴۵۶۷۸۹'[d]);
@@ -3669,6 +3669,10 @@ init() {
             console.warn('⚠️ خطا در بارگذاری داده‌های ذخیره شده، استفاده از پیش‌فرض:', storageError);
         }
 
+        const lastStatus = localStorage.getItem('lastBadgeStatus');
+if (lastStatus) this.updateAppBadge(lastStatus);
+
+
         // 🔥 مقداردهی اولیه متغیرها
         this.currentStatus = 'out';
         this.currentCheckInTime = null;
@@ -5359,7 +5363,7 @@ updateToggleButtonState(isVisible = null) {
 }
 
 // 🔹 نشان‌گذاری آیکن PWA با Badging API
-updateAppBadge(status) {
+/*updateAppBadge(status) {
     try {
         if (!('setAppBadge' in navigator) || !('clearAppBadge' in navigator)) {
             console.log('🚫 Badging API پشتیبانی نمی‌شود');
@@ -5378,7 +5382,38 @@ updateAppBadge(status) {
     } catch (error) {
         console.error('خطا در به‌روزرسانی نشان برنامه:', error);
     }
+}*/
+
+updateAppBadge(status) {
+    try {
+        const badgeEl = document.getElementById('checkInOutBadge');
+
+        // اگر مرورگر از Badging API پشتیبانی کند:
+        if ('setAppBadge' in navigator && 'clearAppBadge' in navigator) {
+            if (status === 'in') {
+                navigator.setAppBadge();
+                console.log('🔴 Badge فعال شد (ورود)');
+            } else {
+                navigator.clearAppBadge();
+                console.log('⚪ Badge حذف شد (خروج)');
+            }
+        } else {
+            // حالت Safari یا مرورگرهای بدون پشتیبانی از Badging API
+            if (!badgeEl) return;
+            if (status === 'in') {
+                badgeEl.style.display = 'block';
+            } else {
+                badgeEl.style.display = 'none';
+            }
+        }
+
+        // وضعیت را ذخیره کن تا بعد از بستن برنامه هم بماند
+        localStorage.setItem('lastBadgeStatus', status);
+    } catch (error) {
+        console.error('❌ خطا در به‌روزرسانی Badge:', error);
+    }
 }
+
 
 
 // روش جایگزین بهبود یافته
