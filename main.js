@@ -1,4 +1,4 @@
-const APP_VERSION = '1.7.18'; // ← فقط این عدد رو موقع آپدیت تغییر بده
+const APP_VERSION = '1.7.19'; // ← فقط این عدد رو موقع آپدیت تغییر بده
 
 function toPersianDigits(num) {
     return num.toString().replace(/[0-9]/g, d => '۰۱۲۳۴۵۶۷۸۹'[d]);
@@ -445,25 +445,9 @@ showUniversalInstallPrompt() {
 
     const installPromotion = document.createElement('div');
     installPromotion.id = 'universalInstallPromotion';
-    installPromotion.style.cssText = `
-        position: fixed;
-        bottom: 20px;
-        left: 20px;
-        right: 20px;
-        background: linear-gradient(135deg, var(--primary), var(--secondary));
-        color: white;
-        padding: 20px;
-        border-radius: var(--radius);
-        box-shadow: var(--shadow);
-        z-index: 10010;
-        display: flex;
-        justify-content: space-between;
-        align-items: center;
-        animation: slideUpInstall 0.5s ease-out;
-    `;
-    
+
     installPromotion.innerHTML = `
-        <div style="flex: 1;">
+        <div style="textpayamnasb">
             <strong>📱 نصب برنامه</strong>
             <div style="font-size: 14px; margin-top: 5px;">برای تجربه بهتر، برنامه را نصب کنید</div>
         </div>
@@ -471,7 +455,7 @@ showUniversalInstallPrompt() {
             <button id="universalInstallButton" class="pwainstall">
                 نصب برنامه
             </button>
-            <button id="universalInstallClose" style="background: none; border: none; color: white; font-size: 18px; cursor: pointer; padding: 5px;">
+            <button id="universalInstallClose" class="zarbdedar" >
                 ✕
             </button>
         </div>
@@ -480,7 +464,7 @@ showUniversalInstallPrompt() {
         text-align: center;
         font-size: 11px;
         width:12%;">
-            <label style="display: inline-flex; align-items: center; gap: 5px; cursor: pointer; color: rgba(255,255,255,0.8);">
+            <label class="noshow">
                 <input type="checkbox" id="universalDontShowAgain">
                 این پیام را دیگر نشان نده
             </label>
@@ -507,7 +491,7 @@ showUniversalInstallPrompt() {
         if (document.getElementById('universalInstallPromotion')) {
             installPromotion.remove();
         }
-    }, 10000);
+    }, 10000000);
 }
 
 // نصب جهانی برای همه دستگاه‌ها
@@ -3224,8 +3208,8 @@ getDefaultSettings() {
     return {
         hourlyRate: 50000,
         overtimeRate: 75000,
-        dailyHours: 8,
-        workDaysPerWeek: 6,
+        monthlyWorkHours: 192, // ساعت کاری ماهانه پیش‌فرض
+        absenceThreshold: 24,  // آستانه غیبت (ساعت)
         overtimeThreshold: 15,
         fontFamily: 'AsaGity',
         theme: 'system', // 🔥 تم پیشفرض
@@ -3763,6 +3747,8 @@ finalizeInitialization() {
         
         // 🔥 انتشار event برای اطلاع سایر بخش‌ها
         this.triggerSystemReadyEvent();
+
+        this.hideSplashScreen();
         
     } catch (error) {
         console.error('❌ خطا در تکمیل راه‌اندازی:', error);
@@ -5797,7 +5783,7 @@ saveEdit() {
     }
 }
             
-// بارگذاری گزارش ماهانه با فرمت ساعت و دقیقه
+// بارگذاری گزارش ماهانه با سیستم جدید
 loadMonthlyReport() {
     const monthlyData = {};
     
@@ -5811,34 +5797,31 @@ loadMonthlyReport() {
             monthlyData[monthYear] = {
                 year: jalaliYear,
                 month: jalaliMonth,
-                normalHours: 0,
-                overtimeHours: 0,
-                totalHours: 0,
-                normalIncome: 0,
-                overtimeIncome: 0,
-                totalIncome: 0
+                records: []
             };
         }
+        monthlyData[monthYear].records.push(record);
     });
     
+    // محاسبه آمار برای هر ماه
     Object.keys(monthlyData).forEach(monthYear => {
-        const [year, month] = monthYear.split('-');
-        const monthRecords = this.records.filter(record => {
-            const jalaliDate = toJalaliDate(record.date).split('/');
-            return parseInt(jalaliDate[0]) === parseInt(year) && 
-                   parseInt(jalaliDate[1]) === parseInt(month);
-        });
+        const data = monthlyData[monthYear];
+        const monthlyStats = this.calculateMonthlyWorkHours(data.records);
         
-        const dailyData = this.calculateDailyData(monthRecords);
+        // محاسبه درآمد
+        data.normalIncome = monthlyStats.normalHours * this.settings.hourlyRate;
+        data.overtimeIncome = monthlyStats.overtimeHours * this.settings.overtimeRate;
+        data.totalIncome = data.normalIncome + data.overtimeIncome;
         
-        monthlyData[monthYear].normalHours = dailyData.totalNormalHours;
-        monthlyData[monthYear].overtimeHours = dailyData.totalOvertimeHours;
-        monthlyData[monthYear].totalHours = dailyData.totalHours;
-        monthlyData[monthYear].normalIncome = dailyData.totalNormalIncome;
-        monthlyData[monthYear].overtimeIncome = dailyData.totalOvertimeIncome;
-        monthlyData[monthYear].totalIncome = dailyData.totalIncome;
+        // اضافه کردن داده‌های محاسبه شده
+        Object.assign(data, monthlyStats);
     });
     
+    this.displayMonthlyReportTable(monthlyData);
+}
+
+// نمایش جدول گزارش ماهانه
+displayMonthlyReportTable(monthlyData) {
     const tbody = document.querySelector('#monthlyTable tbody');
     tbody.innerHTML = '';
     
@@ -5851,6 +5834,11 @@ loadMonthlyReport() {
         const data = monthlyData[monthYear];
         const monthName = monthNames[data.month - 1];
         const row = document.createElement('tr');
+        
+        // اضافه کردن کلاس هشدار برای ماه‌هایی که غیبت دارند
+        const rowClass = data.isAbsence ? 'absence-warning' : '';
+        
+        row.className = rowClass;
         row.innerHTML = `
             <td>${data.year} ${monthName}</td>
             <td>${this.formatHours(data.normalHours)}</td>
@@ -5859,12 +5847,13 @@ loadMonthlyReport() {
             <td>${this.formatCurrency(data.normalIncome)}</td>
             <td>${this.formatCurrency(data.overtimeIncome)}</td>
             <td>${this.formatCurrency(data.totalIncome)}</td>
+            <td>${data.isAbsence ? '⚠️ ' : ''}${data.workDays} روز</td>
         `;
         tbody.appendChild(row);
     });
     
     if (tbody.children.length === 0) {
-        tbody.innerHTML = '<tr><td colspan="7" style="text-align: center;">هیچ داده‌ای برای نمایش وجود ندارد</td></tr>';
+        tbody.innerHTML = '<tr><td colspan="8" style="text-align: center;">هیچ داده‌ای برای نمایش وجود ندارد</td></tr>';
     }
 }
 
@@ -6026,16 +6015,48 @@ toggleBackgroundAnimation(enabled) {
 }
 
 // بارگذاری گزارش سالانه با فرمت ساعت و دقیقه
+// تابع اصلاحی
 loadYearlyReport() {
     const yearlyData = {};
-    
+    const monthlyReportData = {};
+
+    // 1. ابتدا داده‌ها را بر اساس ماه شمسی گروه‌بندی کنید
     this.records.forEach(record => {
-        const jalaliDate = toJalaliDate(record.date).split('/');
-        const jalaliYear = parseInt(jalaliDate[0]);
+        try {
+            const jalaliDate = toJalaliDate(record.date).split('/');
+            const jalaliYear = parseInt(jalaliDate[0]);
+            const jalaliMonth = parseInt(jalaliDate[1]);
+            const monthYear = `${jalaliYear}-${String(jalaliMonth).padStart(2, '0')}`;
+            
+            if (!monthlyReportData[monthYear]) {
+                monthlyReportData[monthYear] = {
+                    year: jalaliYear,
+                    month: jalaliMonth,
+                    records: []
+                };
+            }
+            monthlyReportData[monthYear].records.push(record);
+        } catch (e) {
+            console.warn("خطا در پردازش تاریخ:", record.date, e);
+        }
+    });
+
+    // 2. محاسبه آمار ماهانه (با منطق جدید) برای هر ماه
+    Object.keys(monthlyReportData).forEach(monthYear => {
+        const data = monthlyReportData[monthYear];
         
-        if (!yearlyData[jalaliYear]) {
-            yearlyData[jalaliYear] = {
-                year: jalaliYear,
+        // استفاده از تابع محاسبه ماهانه جدید
+        const monthlyStats = this.calculateMonthlyWorkHours(data.records);
+        
+        const normalIncome = monthlyStats.normalHours * this.settings.hourlyRate;
+        const overtimeIncome = monthlyStats.overtimeHours * this.settings.overtimeRate;
+        const totalIncome = normalIncome + overtimeIncome;
+
+        // 3. جمع کردن نتایج ماهانه در داده‌های سالانه
+        const year = data.year;
+        if (!yearlyData[year]) {
+            yearlyData[year] = {
+                year: year,
                 normalHours: 0,
                 overtimeHours: 0,
                 totalHours: 0,
@@ -6044,24 +6065,16 @@ loadYearlyReport() {
                 totalIncome: 0
             };
         }
+        
+        yearlyData[year].normalHours += monthlyStats.normalHours;
+        yearlyData[year].overtimeHours += monthlyStats.overtimeHours;
+        yearlyData[year].totalHours += monthlyStats.totalHours;
+        yearlyData[year].normalIncome += normalIncome;
+        yearlyData[year].overtimeIncome += overtimeIncome;
+        yearlyData[year].totalIncome += totalIncome;
     });
     
-    Object.keys(yearlyData).forEach(year => {
-        const yearRecords = this.records.filter(record => {
-            const jalaliDate = toJalaliDate(record.date).split('/');
-            return parseInt(jalaliDate[0]) === parseInt(year);
-        });
-        
-        const dailyData = this.calculateDailyData(yearRecords);
-        
-        yearlyData[year].normalHours = dailyData.totalNormalHours;
-        yearlyData[year].overtimeHours = dailyData.totalOvertimeHours;
-        yearlyData[year].totalHours = dailyData.totalHours;
-        yearlyData[year].normalIncome = dailyData.totalNormalIncome;
-        yearlyData[year].overtimeIncome = dailyData.totalOvertimeIncome;
-        yearlyData[year].totalIncome = dailyData.totalIncome;
-    });
-    
+    // 4. نمایش در جدول
     const tbody = document.querySelector('#yearlyTable tbody');
     tbody.innerHTML = '';
     
@@ -6069,7 +6082,7 @@ loadYearlyReport() {
         const data = yearlyData[year];
         const row = document.createElement('tr');
         row.innerHTML = `
-            <td>${data.year}</td>
+            <td>${this.toPersianDigits(data.year)}</td>
             <td>${this.formatHours(data.normalHours)}</td>
             <td>${this.formatHours(data.overtimeHours)}</td>
             <td>${this.formatHours(data.totalHours)}</td>
@@ -6219,10 +6232,85 @@ calculateWorkHours(inTime, outTime) {
     return workMinutes / 60;
 }
 
+// تابع به‌روزرسانی آمار ماهانه با سیستم جدید
+updateMonthlyStatsWithNewSystem() {
+    try {
+        const now = new Date();
+        const currentMonth = now.getMonth() + 1;
+        const currentYear = now.getFullYear();
+        
+        // تمام رکوردهای ماه جاری
+        const monthRecords = this.records.filter(record => {
+            const recordDate = new Date(record.date);
+            return recordDate.getFullYear() === currentYear && 
+                   recordDate.getMonth() + 1 === currentMonth;
+        });
+        
+        // محاسبه ساعات کاری ماهانه
+        const monthlyData = this.calculateMonthlyWorkHours(monthRecords);
+        
+        // محاسبه درآمد
+        const normalIncome = monthlyData.normalHours * this.settings.hourlyRate;
+        const overtimeIncome = monthlyData.overtimeHours * this.settings.overtimeRate;
+        const totalIncome = normalIncome + overtimeIncome;
+        
+        // به‌روزرسانی نمایش
+        this.updateMonthlyDisplay(monthlyData, normalIncome, overtimeIncome, totalIncome);
+        
+    } catch (error) {
+        console.error('خطا در به‌روزرسانی آمار ماهانه:', error);
+    }
+}
+
+// تابع به‌روزرسانی نمایش آمار ماهانه
+updateMonthlyDisplay(monthlyData, normalIncome, overtimeIncome, totalIncome) {
+    try {
+        // به‌روزرسانی ساعات ماهانه
+        const monthlyHoursElement = document.getElementById('monthlyHours');
+        if (monthlyHoursElement) {
+            monthlyHoursElement.textContent = this.formatHoursWithMinutes(monthlyData.totalHours);
+        }
+        
+        // به‌روزرسانی درآمد ماهانه
+        const monthlySalaryElement = document.getElementById('monthlySalary');
+        if (monthlySalaryElement) {
+            monthlySalaryElement.textContent = this.formatCurrency(totalIncome);
+        }
+        
+        // به‌روزرسانی روزهای کاری
+        const workDaysElement = document.getElementById('workDays');
+        if (workDaysElement) {
+            workDaysElement.textContent = this.toPersianDigits(monthlyData.workDays) + ' روز';
+        }
+        
+        // نمایش وضعیت غیبت (اگر وجود دارد)
+        if (monthlyData.isAbsence) {
+            this.showAbsenceWarning(monthlyData.absenceHours);
+        }
+        
+    } catch (error) {
+        console.error('خطا در به‌روزرسانی نمایش آمار:', error);
+    }
+}
 
 
+// تابع نمایش هشدار غیبت
+showAbsenceWarning(absenceHours) {
+    const warningMessage = `⚠️ هشدار: ${this.formatHoursWithMinutes(absenceHours)} کم‌کاری (نزدیک به غیبت) در این ماه ثبت شده است.`;
+    
+    // نمایش نوتیفیکیشن - (طبق درخواست کاربر حذف شد تا فقط در گزارش دیده شود)
+    // this.showNotification(warningMessage, 'warning'); 
+    
+    // همچنین می‌توانید یک نشانگر بصری اضافه کنید
+    const workDaysElement = document.getElementById('workDays');
+    if (workDaysElement) {
+        workDaysElement.style.color = 'var(--danger)';
+        workDaysElement.innerHTML += ' ⚠️';
+    }
+}
             
-// به روزرسانی آمار - نسخه دیباگ شده
+
+// تابع به‌روزرسانی آمار - نسخه اصلاح شده برای سیستم ماهانه
 updateStats() {
     try {
         const today = this.getTodayDate();
@@ -6244,8 +6332,8 @@ updateStats() {
         // به‌روزرسانی ساعات امروز
         document.getElementById('todayHours').textContent = this.formatHoursWithMinutes(todayHours);
         
-        // محاسبه و به‌روزرسانی آمار ماهانه با در نظر گرفتن نمایش زنده
-        this.updateMonthlyStatsWithLiveData(today, todayHours);
+        // استفاده از سیستم جدید محاسبه ماهانه
+        this.updateMonthlyStatsWithNewSystem();
         
     } catch (error) {
         console.error('خطا در به‌روزرسانی آمار:', error);
@@ -7379,16 +7467,28 @@ applySheetStyles(ws, dataLength) {
     );
 }
 
-// محاسبه داده‌های ماهانه برای صورت‌حساب
+// تابع اصلاحی
+// محاسبه داده‌های ماهانه برای صورت‌حساب (اکسل)
 calculateMonthlyData(monthRecords) {
-    const dailyData = this.calculateDailyData(monthRecords);
+    // 1. استفاده از تابع محاسبه ماهانه جدید
+    const monthlyStats = this.calculateMonthlyWorkHours(monthRecords);
     
-    // محاسبه روزهای کاری
-    const workDays = new Set(monthRecords.map(record => record.date)).size;
-    
+    // 2. محاسبه درآمد
+    const normalIncome = monthlyStats.normalHours * this.settings.hourlyRate;
+    const overtimeIncome = monthlyStats.overtimeHours * this.settings.overtimeRate;
+    const totalIncome = normalIncome + overtimeIncome;
+
+    // 3. بازگرداندن داده‌ها در فرمت مورد انتظار
     return {
-        ...dailyData,
-        workDays: workDays
+        totalNormalHours: monthlyStats.normalHours, // برای سازگاری با تابع قبلی
+        totalOvertimeHours: monthlyStats.overtimeHours, // برای سازگاری با تابع قبلی
+        totalHours: monthlyStats.totalHours,
+        normalIncome: normalIncome,
+        overtimeIncome: overtimeIncome,
+        totalIncome: totalIncome,
+        workDays: monthlyStats.workDays,
+        absenceHours: monthlyStats.absenceHours,
+        isAbsence: monthlyStats.isAbsence
     };
 }
 
@@ -7427,29 +7527,23 @@ getDailyDetails(monthRecords) {
     return details;
 }
 
-// محاسبه داده‌های روز
-// محاسبه داده‌های روز - نسخه ایمن‌تر
+// تابع (اصلاحی اساسی)
+// محاسبه داده‌های روز - نسخه ایمن‌تر (اصلاح شده برای منطق ماهانه)
 calculateDayData(records, date) {
     try {
         if (!records || records.length === 0) {
             return {
-                firstIn: null,
-                lastOut: null,
-                totalHours: 0,
-                overtimeHours: 0,
-                dailyIncome: 0,
-                status: 'غیبت'
+                firstIn: null, lastOut: null, totalHours: 0,
+                overtimeHours: 0, normalHours: 0, dailyIncome: 0, status: 'غیبت'
             };
         }
 
-        // مرتب کردن رکوردها بر اساس زمان
         records.sort((a, b) => a.timestamp - b.timestamp);
         
         let firstIn = null;
         let lastOut = null;
-        let totalHours = 0;
+        let totalHours = this.calculateDayWorkHours(records); // استفاده از تابع کمکی ساعات خام
         
-        // پیدا کردن اولین ورود و آخرین خروج
         records.forEach(record => {
             if (record.type === 'in' && !firstIn) {
                 firstIn = record.time;
@@ -7458,20 +7552,8 @@ calculateDayData(records, date) {
                 lastOut = record.time;
             }
         });
-        
-        // محاسبه ساعات کار
-        let i = 0;
-        while (i < records.length - 1) {
-            if (records[i].type === 'in' && records[i + 1].type === 'out') {
-                const hours = this.calculateWorkHours(records[i].time, records[i + 1].time);
-                totalHours += hours;
-                i += 2;
-            } else {
-                i++;
-            }
-        }
 
-        // محاسبه اضافه کاری
+        // --- بخش اصلی تغییرات ---
         const dateObj = new Date(date);
         const dayOfWeek = dateObj.getDay();
         const daySettings = this.settings.overtimeDaysSettings ? 
@@ -7480,36 +7562,50 @@ calculateDayData(records, date) {
         let overtimeHours = 0;
         
         if (daySettings && daySettings.enabled) {
+            // این روز یک روز اضافه کاری خاص است
             if (daySettings.allDay) {
                 overtimeHours = totalHours;
             } else {
-                overtimeHours = this.calculateOvertimeHoursForDay(records, date);
+                // محاسبه اضافه کاری در بازه زمانی مشخص
+                const overtimeStart = this.timeToMinutes(daySettings.startTime);
+                const overtimeEnd = this.timeToMinutes(daySettings.endTime);
+                
+                let sessionStartTime = null;
+                for (const record of records) {
+                    if (record.type === 'in') {
+                        sessionStartTime = record.time;
+                    } else if (record.type === 'out' && sessionStartTime) {
+                        overtimeHours += this.calculateOvertimeInSession(
+                            sessionStartTime, record.time, overtimeStart, overtimeEnd
+                        );
+                        sessionStartTime = null;
+                    }
+                }
             }
-        } else {
-            overtimeHours = Math.max(totalHours - this.settings.dailyHours, 0);
-        }
+        } 
+        // else: (روز عادی)
+        // اضافه کاری روزانه دیگر محاسبه نمی‌شود (overtimeHours = 0)
+        // اضافه کاری عادی در پایان ماه محاسبه خواهد شد.
         
         const normalHours = totalHours - overtimeHours;
         const dailyIncome = (normalHours * this.settings.hourlyRate) + (overtimeHours * this.settings.overtimeRate);
+        // --- پایان بخش تغییرات ---
 
         return {
             firstIn: firstIn,
             lastOut: lastOut,
             totalHours: totalHours || 0,
+            normalHours: normalHours || 0,
             overtimeHours: overtimeHours || 0,
             dailyIncome: dailyIncome || 0,
-            status: this.getDayStatus(totalHours, overtimeHours)
+            status: this.getDayStatus(totalHours, overtimeHours) // وضعیت روز بر اساس ساعات خام
         };
         
     } catch (error) {
         console.error('خطا در محاسبه داده‌های روز:', error);
         return {
-            firstIn: null,
-            lastOut: null,
-            totalHours: 0,
-            overtimeHours: 0,
-            dailyIncome: 0,
-            status: 'خطا'
+            firstIn: null, lastOut: null, totalHours: 0,
+            overtimeHours: 0, normalHours: 0, dailyIncome: 0, status: 'خطا'
         };
     }
 }
@@ -7539,7 +7635,8 @@ getJalaliMonthName(month) {
     return months[month - 1] || month;
 }
 
-// محاسبه داده‌های ماهانه سال
+// تابع اصلاحی
+// محاسبه داده‌های ماهانه سال (برای اکسل)
 calculateYearlyMonthlyData() {
     const monthlyData = {};
     const currentYear = new Date().getFullYear();
@@ -7548,6 +7645,7 @@ calculateYearlyMonthlyData() {
         const recordDate = new Date(record.date);
         const year = recordDate.getFullYear();
         
+        // فقط سال جاری را در نظر بگیر
         if (year === currentYear) {
             const month = recordDate.getMonth() + 1;
             const key = `${year}-${month}`;
@@ -7568,22 +7666,158 @@ calculateYearlyMonthlyData() {
     const result = [];
     Object.keys(monthlyData).forEach(key => {
         const data = monthlyData[key];
-        const dailyData = this.calculateDailyData(data.records);
         
+        // 1. استفاده از تابع محاسبه ماهانه جدید
+        const monthlyStats = this.calculateMonthlyWorkHours(data.records);
+        
+        // 2. محاسبه درآمد
+        const normalIncome = monthlyStats.normalHours * this.settings.hourlyRate;
+        const overtimeIncome = monthlyStats.overtimeHours * this.settings.overtimeRate;
+        const totalIncome = normalIncome + overtimeIncome;
+
         result.push({
             month: data.month,
             monthName: data.monthName,
-            workDays: new Set(data.records.map(r => r.date)).size,
-            normalHours: dailyData.totalNormalHours,
-            overtimeHours: dailyData.totalOvertimeHours,
-            normalIncome: dailyData.totalNormalIncome,
-            overtimeIncome: dailyData.totalOvertimeIncome,
-            totalIncome: dailyData.totalIncome
+            workDays: monthlyStats.workDays,
+            normalHours: monthlyStats.normalHours,
+            overtimeHours: monthlyStats.overtimeHours,
+            normalIncome: normalIncome,
+            overtimeIncome: overtimeIncome,
+            totalIncome: totalIncome
         });
     });
     
     return result.sort((a, b) => a.month - b.month);
 }
+
+// تابع (اصلاحی اساسی)
+// تابع جدید برای محاسبه ساعات کاری ماهانه (با احتساب روزهای خاص)
+calculateMonthlyWorkHours(monthRecords) {
+    if (!monthRecords || monthRecords.length === 0) {
+        return {
+            totalHours: 0, normalHours: 0, overtimeHours: 0,
+            absenceHours: 0, workDays: 0, absenceDays: 0, isAbsence: false
+        };
+    }
+
+    // گروه‌بندی رکوردها بر اساس تاریخ
+    const dailyRecords = {};
+    monthRecords.forEach(record => {
+        if (!dailyRecords[record.date]) {
+            dailyRecords[record.date] = [];
+        }
+        dailyRecords[record.date].push(record);
+    });
+
+    let totalNormalHoursPool = 0;   // ساعات کاری عادی جمع شده برای کسر از موظفی
+    let totalOvertimeHoursSpecial = 0; // ساعات اضافه کاری روزهای خاص
+    let workDays = 0;
+    let absenceDays = 0;
+
+    // محاسبه ساعات کار برای هر روز
+    Object.keys(dailyRecords).forEach(date => {
+        const dayRecords = dailyRecords[date];
+        const dayHours = this.calculateDayWorkHours(dayRecords); // محاسبه ساعات خام روز
+        
+        if (dayHours > 0) {
+            workDays++;
+            
+            // بررسی اینکه آیا این روز یک "روز اضافه کاری خاص" است
+            const dateObj = new Date(date);
+            const dayOfWeek = dateObj.getDay(); // 0: Sunday, ..., 6: Saturday
+            const daySettings = this.settings.overtimeDaysSettings ? 
+                this.settings.overtimeDaysSettings[dayOfWeek] : null;
+
+            if (daySettings && daySettings.enabled) {
+                // این یک روز خاص است
+                if (daySettings.allDay) {
+                    // تمام ساعات امروز اضافه کاری است
+                    totalOvertimeHoursSpecial += dayHours;
+                } else {
+                    // محاسبه اضافه کاری فقط در بازه زمانی مشخص
+                    const overtimeStart = this.timeToMinutes(daySettings.startTime);
+                    const overtimeEnd = this.timeToMinutes(daySettings.endTime);
+                    
+                    let dayOvertime = 0;
+                    let sessionStartTime = null;
+                    
+                    dayRecords.sort((a, b) => a.timestamp - b.timestamp);
+                    for (const record of dayRecords) {
+                        if (record.type === 'in') {
+                            sessionStartTime = record.time;
+                        } else if (record.type === 'out' && sessionStartTime) {
+                            // محاسبه اضافه کاری برای این جلسه
+                            dayOvertime += this.calculateOvertimeInSession(
+                                sessionStartTime, 
+                                record.time, 
+                                overtimeStart, 
+                                overtimeEnd
+                            );
+                            sessionStartTime = null; // reset for next pair
+                        }
+                    }
+                    
+                    totalOvertimeHoursSpecial += dayOvertime;
+                    // مابقی ساعات این روز (خارج از بازه خاص) به پول عادی اضافه می‌شود
+                    totalNormalHoursPool += (dayHours - dayOvertime);
+                }
+            } else {
+                // این یک روز کاری عادی است، تمام ساعات به پول عادی می‌رود
+                totalNormalHoursPool += dayHours;
+            }
+        } else {
+            // روزهایی که رکوردی ندارند
+            if (this.isWorkDay(date)) {
+                absenceDays++;
+            }
+        }
+    });
+
+    // تنظیمات ساعت کاری ماهانه
+    const monthlyWorkHours = this.settings.monthlyWorkHours || 192;
+    const absenceThreshold = this.settings.absenceThreshold || 24;
+    
+    // محاسبه نهایی بر اساس پول ساعات عادی
+    const finalNormalHours = Math.min(totalNormalHoursPool, monthlyWorkHours);
+    const finalOvertimeHoursNormal = Math.max(totalNormalHoursPool - monthlyWorkHours, 0);
+    const finalAbsenceHours = Math.max(monthlyWorkHours - totalNormalHoursPool, 0);
+    
+    // جمع کل اضافه کاری
+    const totalOvertimeHours = finalOvertimeHoursNormal + totalOvertimeHoursSpecial;
+    
+    return {
+        totalHours: finalNormalHours + totalOvertimeHours,
+        normalHours: finalNormalHours,
+        overtimeHours: totalOvertimeHours,
+        absenceHours: finalAbsenceHours,
+        absenceDays: absenceDays,
+        workDays: workDays,
+        monthlyWorkHours: monthlyWorkHours,
+        isAbsence: finalAbsenceHours >= absenceThreshold
+    };
+}
+
+// تابع کمکی برای محاسبه ساعات کار روزانه
+calculateDayWorkHours(dayRecords) {
+    let dayHours = 0;
+    
+    // مرتب کردن رکوردها بر اساس زمان
+    dayRecords.sort((a, b) => a.timestamp - b.timestamp);
+    
+    let i = 0;
+    while (i < dayRecords.length - 1) {
+        if (dayRecords[i].type === 'in' && dayRecords[i + 1].type === 'out') {
+            const hours = this.calculateWorkHours(dayRecords[i].time, dayRecords[i + 1].time);
+            dayHours += hours;
+            i += 2;
+        } else {
+            i++;
+        }
+    }
+    
+    return dayHours;
+}
+
 
 // دریافت روزهای کاری ماه
 getWorkDaysInMonth(year, month) {
@@ -8038,7 +8272,7 @@ loadArchiveTab(form) {
                     
                     <div class="form-group">
                         <label class="form-label">سال (شمسی)</label>
-                        <input type="number" class="form-control" id="archiveYear" placeholder="1403" min="1400" max="1500">
+                        <input type="number" class="form-control" id="archiveYear" placeholder="1404" min="1400" max="1500">
                     </div>
                     
                     <div class="form-group">
@@ -10079,12 +10313,13 @@ saveCurrentTabSettings() {
     }
 }
 
+// تابع (اصلاحی)
 saveMainTabSettings() {
     const mainSettings = {
         hourlyRate: parseInt(document.getElementById('hourlyRate')?.value) || this.settings.hourlyRate,
         overtimeRate: parseInt(document.getElementById('overtimeRate')?.value) || this.settings.overtimeRate,
-        dailyHours: parseInt(document.getElementById('dailyHours')?.value) || this.settings.dailyHours,
-        workDaysPerWeek: parseInt(document.getElementById('workDaysPerWeek')?.value) || this.settings.workDaysPerWeek,
+        monthlyWorkHours: parseInt(document.getElementById('monthlyWorkHours')?.value) || 192, // اصلاح شد
+        absenceThreshold: parseInt(document.getElementById('absenceThreshold')?.value) || 24, // اصلاح شد
         overtimeThreshold: parseInt(document.getElementById('overtimeThreshold')?.value) || this.settings.overtimeThreshold
     };
     
@@ -10277,6 +10512,7 @@ loadSettingsTab(tabName) {
 }
 
 // اصلاح تابع loadMainSettingsTab - حذف بخش دسترسی سریع
+// تابع (اصلاحی)
 loadMainSettingsTab(form) {
     form.innerHTML = `
         <div class="tab-content active" id="mainTab">
@@ -10293,31 +10529,30 @@ loadMainSettingsTab(form) {
             </div>
             
             <div class="form-group">
-                <label class="form-label" for="dailyHours">ساعات کاری روزانه</label>
-                <input type="number" class="form-control" id="dailyHours" value="8" required>
+                <label class="form-label" for="monthlyWorkHours">ساعات کاری ماهانه</label>
+                <input type="number" class="form-control" id="monthlyWorkHours" value="192" required>
+                <small>ساعت کاری موظفی در یک ماه (مثلا 192)</small>
             </div>
             
             <div class="form-group">
-                <label class="form-label" for="workDaysPerWeek">تعداد روزهای کاری در هفته</label>
-                <input type="number" class="form-control" id="workDaysPerWeek" value="6" min="1" max="7" required>
+                <label class="form-label" for="absenceThreshold">آستانه غیبت (ساعت)</label>
+                <input type="number" class="form-control" id="absenceThreshold" value="24" required>
+                <small>اگر کم‌کاری ماهانه از این عدد بیشتر شود، غیبت محسوب می‌شود (مثلا 24 ساعت معادل 3 روز)</small>
             </div>
-            
             <div class="form-group">
                 <label class="form-label" for="overtimeThreshold">آستانه اضافه‌کاری (دقیقه)</label>
                 <input type="number" class="form-control" id="overtimeThreshold" value="15" required>
-                <small>اگر کارمند بیش از این مقدار دیرتر از زمان پایان کار خارج شود، اضافه‌کاری محاسبه می‌شود.</small>
+                <small>این مورد در حال حاضر در محاسبات ماهانه تاثیری ندارد (مربوط به منطق روزانه بود)</small>
             </div>
 
-            <!-- بخش روزهای خارج از ساعت -->
             <div class="form-group">
                 <label class="form-label">📅 روزهای خارج از ساعت (اضافه کاری)</label>
                 <div id="overtimeDaysContainer" style="margin-top: 10px;">
-                    <!-- روزها اینجا dynamically ساخته می‌شوند -->
-                </div>
+                    </div>
                 <small>در این روزها تمام ساعات کار یا ساعات مشخص شده به عنوان اضافه کاری محاسبه می‌شود.</small>
             </div>
 
-                        <div class="form-group">
+            <div class="form-group">
                 <label class="form-label">عملیات سریع</label>
                 <div class="action-buttons">
                     <button type="button" class="btn btn-warning" id="resetToDefaultsBtn" style="width: 100%;">
@@ -10335,15 +10570,17 @@ loadMainSettingsTab(form) {
             </div>
         </div>
     `;
+    
     // اضافه کردن event listener برای دکمه بازگشت به پیش‌فرض
     document.getElementById('resetToDefaultsBtn').addEventListener('click', () => {
         this.resetToDefaultSettings();
     });
-    // پر کردن مقادیر
+    
+    // پر کردن مقادیر (مهم)
     document.getElementById('hourlyRate').value = this.settings.hourlyRate;
     document.getElementById('overtimeRate').value = this.settings.overtimeRate;
-    document.getElementById('dailyHours').value = this.settings.dailyHours;
-    document.getElementById('workDaysPerWeek').value = this.settings.workDaysPerWeek;
+    document.getElementById('monthlyWorkHours').value = this.settings.monthlyWorkHours || 192; // اصلاح شد
+    document.getElementById('absenceThreshold').value = this.settings.absenceThreshold || 24; // اصلاح شد
     document.getElementById('overtimeThreshold').value = this.settings.overtimeThreshold;
 
     // ایجاد روزهای هفته برای انتخاب
@@ -10354,7 +10591,7 @@ loadMainSettingsTab(form) {
         this.openInstallGuide();
     });
 }
-
+  
 // تابع جدید برای بازگشت به تنظیمات پیش‌فرض
 resetToDefaultSettings() {
     if (confirm('⚠️ آیا از بازگشت به تنظیمات پیش‌فرض اطمینان دارید؟\nتمام تنظیمات فعلی پاک شده و به حالت اولیه بازمی‌گردند.')) {
@@ -10950,6 +11187,27 @@ document.getElementById('restoreAdvancedBackupBtn').addEventListener('click', ()
     document.getElementById('maxBackups').value = backupSettings.maxBackups || 10;
     document.getElementById('backupLocation').value = backupSettings.backupLocation || 'auto';
     document.getElementById('backupSettings').style.display = backupSettings.enabled !== false ? 'block' : 'none';
+}
+
+// تابع جدید
+// 🔥 تابع جدید برای مخفی کردن صفحه لودینگ
+hideSplashScreen() {
+    try {
+        const splashScreen = document.getElementById('splash-screen');
+        if (splashScreen) {
+            // اضافه کردن کلاس fade-out برای انیمیشن
+            splashScreen.classList.add('fade-out');
+            
+            // حذف کامل المان پس از پایان انیمیشن
+            setTimeout(() => {
+                if (splashScreen.parentNode) {
+                    splashScreen.parentNode.removeChild(splashScreen);
+                }
+            }, 500); // باید با زمان transition در CSS هماهنگ باشد
+        }
+    } catch (error) {
+        console.error('خطا در مخفی کردن صفحه لودینگ:', error);
+    }
 }
 // تب بخش پیشرفته پشتیبان
 // جایگزین تابع loadAdvancedBackupTab با این نسخه
@@ -13552,8 +13810,20 @@ loadFromStorage(key) {
 }
         }
 
-        // راه اندازی برنامه وقتی DOM لود شد
+// تابع اصلاحی
 document.addEventListener('DOMContentLoaded', () => {
+    
+    // ←←← اضافه کردن این بخش
+    // 🔥 به‌روزرسانی نسخه در صفحه لودینگ
+    try {
+        const splashVersionEl = document.getElementById('splash-version');
+        if (splashVersionEl) {
+            // APP_VERSION از خط اول فایل main.js خوانده می‌شود
+            splashVersionEl.textContent = `نسخه ${APP_VERSION}`;
+        }
+    } catch(e) {}
+    // ←←← پایان بخش
+
     // فقط یک نمونه از برنامه بساز
     window.attendanceApp = new AttendanceApp();
     window.attendanceApp.init();
@@ -13565,5 +13835,4 @@ document.addEventListener('DOMContentLoaded', () => {
         const versionEl = document.getElementById('appVersion');
     if (versionEl) versionEl.textContent = APP_VERSION;
 });
-
 
