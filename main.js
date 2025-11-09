@@ -1,4 +1,4 @@
-const APP_VERSION = '1.7.19'; // ← فقط این عدد رو موقع آپدیت تغییر بده
+const APP_VERSION = '1.7.20'; // ← فقط این عدد رو موقع آپدیت تغییر بده
 
 function toPersianDigits(num) {
     return num.toString().replace(/[0-9]/g, d => '۰۱۲۳۴۵۶۷۸۹'[d]);
