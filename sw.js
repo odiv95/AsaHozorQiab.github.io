@@ -1,55 +1,60 @@
 // نسخه برنامه
-const APP_VERSION = '1.7.19'; // ← هر بار تغییر دادید، فقط این عدد را عوض کنید
+const APP_VERSION = '1.7.20'; // ← هر بار تغییر دادید، فقط این عدد را عوض کنید
 
 // Cache Name بر اساس نسخه برنامه
 const CACHE_NAME = `attendance-app-cache-v${APP_VERSION}`;
 
-const ASSETS = [
-  '/',               // صفحه اصلی
-  '/index.html',
-  '/manifest.json',
-  'Images/LogoHozor192.png',
-  'Images/LogoHozor512.png',
+const APP_SHELL_FILES = [
+    '/', // صفحه اصلی
+    '/index.html', // صفحه اصلی (برای اطمینان)
+    '/main.js',
+    '/manifest.json', // اگر دارید
+    '/style.css', // (مسیر فایل CSS اصلی خود را قرار دهید)
+    
+    // تصاویر اصلی
+    '/Images/LogoHozor192.png',
+    '/Images/LogoHozor256.png',
+    '/Images/LogoHozor512.png',
+    '/Images/LogoHozor256x256.png',
+    
+    // فونت‌ها (اگر دارید و می‌خواهید آفلاین کار کنند)
+    'fonts/yekan-font/yekan-regular.woff',
+    'fonts/yekan-font/Yekan.woff',
+    
+    // ! فایل آفلاین جدید
+    '/offline.html'
 ];
 
-// نصب Service Worker
+// 1. رویداد Install: کش کردن فایل‌های اصلی
 self.addEventListener('install', (event) => {
-    console.log('🚀 Service Worker در حال نصب...');
-    
+    console.log('[SW] در حال نصب Service Worker...');
     event.waitUntil(
-        caches.open(STATIC_CACHE)
+        caches.open(CACHE_NAME)
             .then((cache) => {
-                console.log('✅ کش استاتیک ایجاد شد');
-                return cache.addAll(STATIC_FILES);
+                console.log('[SW] کش کردن App Shell و صفحه آفلاین');
+                return cache.addAll(APP_SHELL_FILES);
             })
-            .then(() => {
-                console.log('✅ همه فایل‌ها کش شدند');
-                return self.skipWaiting();
-            })
-            .catch((error) => {
-                console.error('❌ خطا در نصب Service Worker:', error);
+            .catch(err => {
+                console.error('[SW] خطا در کش کردن App Shell:', err);
             })
     );
 });
 
-// فعال‌سازی Service Worker
+// 2. رویداد Activate: پاکسازی کش‌های قدیمی
 self.addEventListener('activate', (event) => {
-    console.log('✅ Service Worker فعال شد');
-    
+    console.log('[SW] Service Worker فعال شد.');
     event.waitUntil(
         caches.keys().then((cacheNames) => {
             return Promise.all(
                 cacheNames.map((cacheName) => {
-                    if (cacheName !== STATIC_CACHE && cacheName !== CACHE_NAME) {
-                        console.log('🗑️ حذف کش قدیمی:', cacheName);
+                    // اگر نام کش با نسخه فعلی مطابقت نداشت، آن را حذف کن
+                    if (cacheName !== CACHE_NAME) {
+                        console.log('[SW] پاکسازی کش قدیمی:', cacheName);
                         return caches.delete(cacheName);
                     }
                 })
             );
-        }).then(() => {
-            console.log('✅ کش‌های قدیمی پاک شدند');
-            return self.clients.claim();
-        })
+        }).then(() => self.clients.claim()) // کنترل فوری صفحه
     );
 });
 
@@ -106,49 +111,54 @@ self.addEventListener('notificationclick', (event) => {
     );
 });
 
-// مدیریت درخواست‌ها
+// 3. رویداد Fetch: مدیریت درخواست‌ها (هسته اصلی آفلاین)
 self.addEventListener('fetch', (event) => {
-    // فقط درخواست‌های GET را مدیریت کن
-    if (event.request.method !== 'GET') return;
+    // ما فقط درخواست‌های GET را مدیریت می‌کنیم
+    if (event.request.method !== 'GET') {
+        return;
+    }
 
+    // استراتژی: ابتدا شبکه، سپس کش (Network Falling Back to Cache)
     event.respondWith(
-        caches.match(event.request)
-            .then((response) => {
-                // اگر فایل در کش وجود دارد، از کش برگردان
-                if (response) {
-                    return response;
-                }
-
-                // در غیر این صورت از شبکه بگیر و کش کن
-                return fetch(event.request)
-                    .then((response) => {
-                        // فقط پاسخ‌های معتبر را کش کن
-                        if (!response || response.status !== 200 || response.type !== 'basic') {
-                            return response;
+        fetch(event.request)
+            .then((networkResponse) => {
+                // اگر موفق بود، پاسخ شبکه را برگردان
+                return networkResponse;
+            })
+            .catch(() => {
+                // اگر شبکه شکست خورد (آفلاین بودیم)
+                console.log(`[SW] شبکه برای ${event.request.url} شکست خورد. تلاش از کش...`);
+                
+                // سعی کن از کش برگردانی
+                return caches.match(event.request)
+                    .then((cachedResponse) => {
+                        if (cachedResponse) {
+                            // اگر در کش بود، آن را برگردان
+                            return cachedResponse;
                         }
 
-                        const responseToCache = response.clone();
-
-                        caches.open(CACHE_NAME)
-                            .then((cache) => {
-                                cache.put(event.request, responseToCache);
-                            });
-
-                        return response;
-                    })
-                    .catch(() => {
-                        // اگر آفلاین هستیم و فایل در کش نیست
-                        if (event.request.destination === 'document') {
-                            return caches.match('./');
+                        // اگر در کش نبود:
+                        // بررسی کن که آیا درخواست برای یک صفحه (navigation) است؟
+                        if (event.request.mode === 'navigate') {
+                            console.log('[SW] صفحه در کش نبود، نمایش صفحه آفلاین.');
+                            // اگر بله، صفحه آفلاین را از کش برگردان
+                            return caches.match('/offline.html');
                         }
+
+                        // اگر درخواست برای چیز دیگری بود (مثل تصویر یا API) و در کش نبود،
+                        // فقط یک پاسخ خطا برگردان.
+                        return new Response(null, {
+                            status: 404,
+                            statusText: "Not Found in Cache"
+                        });
                     });
             })
     );
 });
 
-// پیام‌ها از main.js
-self.addEventListener('message', event => {
-    if (event.data?.type === 'SKIP_WAITING') {
+// 4. مدیریت پیام Skip Waiting (برای به‌روزرسانی)
+self.addEventListener('message', (event) => {
+    if (event.data && event.data.type === 'SKIP_WAITING') {
         self.skipWaiting();
     }
 });
