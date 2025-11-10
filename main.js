@@ -1,4 +1,4 @@
-const APP_VERSION = "1.7.20"; // ← فقط این عدد رو موقع آپدیت تغییر بده
+const APP_VERSION = "1.7.22"; // ← فقط این عدد رو موقع آپدیت تغییر بده
 
 function toPersianDigits(num) {
   return num.toString().replace(/[0-9]/g, (d) => "۰۱۲۳۴۵۶۷۸۹"[d]);
@@ -6206,33 +6206,55 @@ applyParticleStyle(particle, theme, index) {
     return workMinutes / 60;
   }
 
+// تابع (اصلاحی نهایی)
 // (liveTodayHours) پارامتر جدیدی است که فقط در حالت "live" ارسال می‌شود
 updateMonthlyStatsWithNewSystem(liveTodayHours = null) {
     try {
         const now = new Date();
         const today = this.getTodayDate();
-        const currentMonth = now.getMonth() + 1;
-        const currentYear = now.getFullYear();
         
+        // 1. 🔥 استخراج ماه و سال شمسی فعلی (برای فیلتر کردن صحیح)
+        const currentJalaliDate = toJalaliDate(today).split('/');
+        const currentJalaliYear = parseInt(currentJalaliDate[0]);
+        const currentJalaliMonth = parseInt(currentJalaliDate[1]);
+
         let monthRecords;
         
+        // فیلتر کردن رکوردها بر اساس ماه شمسی فعلی
+        const filterRecordsByJalaliMonth = (records, currentYear, currentMonth) => {
+            return records.filter(record => {
+                try {
+                    const recordJalaliDate = toJalaliDate(record.date).split('/');
+                    const recordJalaliYear = parseInt(recordJalaliDate[0]);
+                    const recordJalaliMonth = parseInt(recordJalaliDate[1]);
+                    
+                    return recordJalaliYear === currentYear && recordJalaliMonth === currentMonth;
+                } catch(e) {
+                    console.warn("خطا در تبدیل تاریخ برای رکورد:", record.date, e);
+                    return false;
+                }
+            });
+        };
+
         if (liveTodayHours !== null) {
             // --- حالت زنده ---
             // فقط رکوردهای *قبل* از امروز را بگیر
-            monthRecords = this.records.filter(record => {
-                const recordDate = new Date(record.date);
-                return recordDate.getFullYear() === currentYear && 
-                       recordDate.getMonth() + 1 === currentMonth &&
-                       record.date !== today; // امروز را جداگانه حساب می‌کنیم
-            });
+            const recordsBeforeToday = this.records.filter(record => record.date !== today);
+
+            monthRecords = filterRecordsByJalaliMonth(
+                recordsBeforeToday, 
+                currentJalaliYear, 
+                currentJalaliMonth
+            );
+            
         } else {
             // --- حالت عادی (غیر زنده، مثلا در گزارش‌ها) ---
             // تمام رکوردهای ماه جاری را بگیر
-            monthRecords = this.records.filter(record => {
-                const recordDate = new Date(record.date);
-                return recordDate.getFullYear() === currentYear && 
-                       recordDate.getMonth() + 1 === currentMonth;
-            });
+            monthRecords = filterRecordsByJalaliMonth(
+                this.records, 
+                currentJalaliYear, 
+                currentJalaliMonth
+            );
         }
         
         // محاسبه ساعات کاری ماهانه (برای روزهای گذشته)
@@ -6256,8 +6278,6 @@ updateMonthlyStatsWithNewSystem(liveTodayHours = null) {
 
             if (daySettings && daySettings.enabled) {
                 // امروز روز خاص است
-                // (برای سادگی در حالت زنده، فرض می‌کنیم تمام ساعات روز خاص، اضافه کاری است)
-                // توجه: محاسبه دقیق بازه زمانی در حالت زنده پیچیده است و در اینجا ساده شده
                 totalOvertimeHours += liveTodayHours;
             } else {
                 // امروز روز عادی است
@@ -6269,15 +6289,12 @@ updateMonthlyStatsWithNewSystem(liveTodayHours = null) {
         const monthlyWorkHours = this.settings.monthlyWorkHours || 192;
         const absenceThreshold = this.settings.absenceThreshold || 24;
 
-        // محاسبه اضافه کاری یا کم کاری بر اساس پول ساعات عادی
         const finalNormalHours = Math.min(totalNormalHoursPool, monthlyWorkHours);
         const finalOvertimeHoursNormal = Math.max(totalNormalHoursPool - monthlyWorkHours, 0);
         const finalAbsenceHours = Math.max(monthlyWorkHours - totalNormalHoursPool, 0);
 
-        // جمع کل اضافه کاری (اضافه کاری روزهای خاص + اضافه کاری مازاد بر سقف ماهانه)
         totalOvertimeHours += finalOvertimeHoursNormal;
         
-        // محاسبه درآمد
         const normalIncome = finalNormalHours * this.settings.hourlyRate;
         const overtimeIncome = totalOvertimeHours * this.settings.overtimeRate;
         const totalIncome = normalIncome + overtimeIncome;
@@ -6293,8 +6310,7 @@ updateMonthlyStatsWithNewSystem(liveTodayHours = null) {
         // به‌روزرسانی نمایش
         this.updateMonthlyDisplay(displayData, normalIncome, overtimeIncome, totalIncome);
         
-    } catch (error)
-        {
+    } catch (error) {
         console.error('خطا در به‌روزرسانی آمار ماهانه:', error);
     }
 }
@@ -8592,13 +8608,13 @@ updateStats() {
     }
   }
 
+  // 🟢 کد اصلاح شده
   // این تابع را به کلاس AttendanceApp اضافه کنید
   loadArchiveTab(form) {
     form.innerHTML = `
         <div class="tab-content active" id="archiveTab">
             <h3 class="tab-title">💾 مدیریت آرشیو</h3>
             
-            <!-- فیلترهای پیشرفته -->
             <div class="archive-filters" style="background: var(--background); padding: 20px; border-radius: var(--radius); margin-bottom: 20px;">
                 <h4 style="margin-top: 0; margin-bottom: 15px;">🔍 فیلترهای پیشرفته</h4>
                 
@@ -8607,19 +8623,18 @@ updateStats() {
                         <label class="form-label">نوع فیلتر</label>
                         <select class="form-control" id="archiveFilterType">
                             <option value="day">روز خاص</option>
-                            <option value="month">ماه خاص</option>
-                            <option value="year">سال خاص</option>
+                            <option value="month" selected>ماه خاص</option> <option value="year">سال خاص</option>
                             <option value="range">بازه زمانی</option>
                             <option value="all">همه رکوردها</option>
                         </select>
                     </div>
                     
-                    <div class="form-group">
+                    <div class="form-group" id="archiveYearWrapper">
                         <label class="form-label">سال (شمسی)</label>
                         <input type="number" class="form-control" id="archiveYear" placeholder="1404" min="1400" max="1500">
                     </div>
                     
-                    <div class="form-group">
+                    <div class="form-group" id="archiveMonthWrapper">
                         <label class="form-label">ماه</label>
                         <select class="form-control" id="archiveMonth">
                             <option value="">همه ماه‌ها</option>
@@ -8638,7 +8653,7 @@ updateStats() {
                         </select>
                     </div>
                     
-                    <div class="form-group">
+                    <div class="form-group" id="archiveDayWrapper" style="display: none;">
                         <label class="form-label">روز</label>
                         <select class="form-control" id="archiveDay">
                             <option value="">همه روزها</option>
@@ -8651,7 +8666,6 @@ updateStats() {
                     </div>
                 </div>
                 
-                <!-- بازه زمانی -->
                 <div id="dateRangeFilter" style="display: none;">
                     <div class="form-group">
                         <label class="form-label">بازه زمانی (شمسی)</label>
@@ -8673,7 +8687,6 @@ updateStats() {
                 </div>
             </div>
 
-            <!-- آمار سریع -->
             <div id="archiveStats" style="background: linear-gradient(135deg, var(--primary), var(--secondary)); color: white; padding: 15px; border-radius: var(--radius); margin-bottom: 20px;">
                 <div style="display: flex; justify-content: space-around; text-align: center;">
                     <div>
@@ -8691,7 +8704,6 @@ updateStats() {
                 </div>
             </div>
 
-            <!-- دکمه‌های عملیات -->
             <div class="action-buttons-grid" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 10px; margin-bottom: 20px;">
                 <button type="button" class="btn btn-success" id="addArchiveRecordBtn">
                     <i class="fas fa-plus-circle"></i> افزودن رکورد جدید
@@ -8707,7 +8719,6 @@ updateStats() {
                 </button>
             </div>
 
-            <!-- جدول نتایج -->
             <div class="table-container" style="max-height: 500px; overflow-y: auto;">
                 <table id="archiveTable" class="data-table">
                     <thead>
@@ -8727,12 +8738,10 @@ updateStats() {
                         </tr>
                     </thead>
                     <tbody id="archiveTableBody">
-                        <!-- داده‌ها اینجا لود می‌شوند -->
-                    </tbody>
+                        </tbody>
                 </table>
             </div>
 
-            <!-- صفحه‌بندی -->
             <div class="pagination" style="display: flex; justify-content: space-between; align-items: center; margin-top: 15px; padding: 10px; background: var(--background); border-radius: var(--radius);">
                 <div>
                     <span id="archivePaginationInfo">نمایش ۰ از ۰ رکورد</span>
@@ -8812,17 +8821,42 @@ updateStats() {
       });
   }
 
+  // 🟢 کد اصلاح شده
   // تغییر نوع فیلتر
   handleArchiveFilterTypeChange(filterType) {
     const dateRangeFilter = document.getElementById("dateRangeFilter");
-
-    if (filterType === "range") {
-      dateRangeFilter.style.display = "block";
-    } else {
-      dateRangeFilter.style.display = "none";
+    const yearWrapper = document.getElementById("archiveYearWrapper");
+    const monthWrapper = document.getElementById("archiveMonthWrapper");
+    const dayWrapper = document.getElementById("archiveDayWrapper");
+  
+    // ابتدا همه فیلدهای ورودی را مخفی کن
+    if (yearWrapper) yearWrapper.style.display = "none";
+    if (monthWrapper) monthWrapper.style.display = "none";
+    if (dayWrapper) dayWrapper.style.display = "none";
+    if (dateRangeFilter) dateRangeFilter.style.display = "none";
+  
+    // نمایش فیلدهای مورد نیاز بر اساس نوع فیلتر
+    switch (filterType) {
+      case "day":
+        if (yearWrapper) yearWrapper.style.display = "block";
+        if (monthWrapper) monthWrapper.style.display = "block";
+        if (dayWrapper) dayWrapper.style.display = "block";
+        break;
+      case "month":
+        if (yearWrapper) yearWrapper.style.display = "block";
+        if (monthWrapper) monthWrapper.style.display = "block";
+        break;
+      case "year":
+        if (yearWrapper) yearWrapper.style.display = "block";
+        break;
+      case "range":
+        if (dateRangeFilter) dateRangeFilter.style.display = "block";
+        break;
+      case "all":
+        // برای "همه رکوردها" هیچ فیلتری نمایش داده نمی‌شود
+        break;
     }
   }
-
   // تنظیم تاریخ‌های پیشفرض
   setDefaultArchiveDates() {
     const currentJalali = this.getCurrentJalaliDate();
@@ -9551,7 +9585,7 @@ updateStats() {
 
   // بازنشانی فیلترها
   resetArchiveFilters() {
-    document.getElementById("archiveFilterType").value = "day";
+    document.getElementById("archiveFilterType").value = "all";
     document.getElementById("archiveYear").value = "";
     document.getElementById("archiveMonth").value = "";
     document.getElementById("archiveDay").value = "";
@@ -13427,17 +13461,20 @@ updateStats() {
     }
   }
 
+// 🟢 کد اصلاح شده
   // جایگزین تابع openArchiveModal
   openArchiveModal() {
     try {
-      console.log("📂 باز کردن مودال آرشیو...");
+      console.log("📂 باز کردن مودال آرشیو اصلی...");
 
-      // ایجاد مودال اگر وجود ندارد
-      if (!document.getElementById("archiveModal")) {
-        this.createArchiveModal();
-      }
-
+      // 🔥 ایجاد مودال اگر وجود ندارد (بر اساس HTML شما، این مودال باید در index.html باشد)
       const modal = document.getElementById("archiveModal");
+      if (!modal) {
+          console.error("❌ مودال اصلی آرشیو (id='archiveModal') در HTML پیدا نشد!");
+          // اگر تابع createArchiveModal را حذف کرده‌اید، مطمئن شوید HTML آن در فایل اصلی وجود دارد
+          this.showNotification("خطا: مودال آرشیو پیدا نشد", "error");
+          return; 
+      }
 
       // نمایش مودال اول
       modal.style.display = "flex";
@@ -13452,23 +13489,53 @@ updateStats() {
           setTimeout(() => {
             try {
               this.loadArchiveData();
-              console.log("✅ داده‌های آرشیو بارگذاری شدند");
+              console.log("✅ داده‌های آرشیو اصلی بارگذاری شدند");
             } catch (loadError) {
-              console.error("❌ خطا در بارگذاری داده‌های آرشیو:", loadError);
+              console.error("❌ خطا در بارگذاری داده‌های آرشیو اصلی:", loadError);
               this.showNotification(
                 "❌ خطا در بارگذاری داده‌های آرشیو",
                 "error"
               );
             }
           }, 200);
+          
+          // 🔥🔥 بخش جدید: اضافه کردن Event Listeners برای فیلترها
+          // این بخش مشکل کار نکردن فیلترها را حل می‌کند
+          
+          const setupListener = (id, event, callback) => {
+              const element = document.getElementById(id);
+              if (element) {
+                  // حذف شنونده قبلی (اگر وجود داشته باشد)
+                  const newElement = element.cloneNode(true);
+                  element.parentNode.replaceChild(newElement, element);
+                  newElement.addEventListener(event, callback);
+              } else {
+                  console.warn(`⚠️ المان ${id} در مودال اصلی پیدا نشد.`);
+              }
+          };
+
+          // اعمال فیلتر با تغییر هر کدام از سلکت‌ها
+          setupListener("mainArchiveMonth", "change", () => this.loadArchiveData());
+          setupListener("mainArchiveYear", "change", () => this.loadArchiveData());
+          setupListener("mainArchiveDay", "change", () => this.loadArchiveData());
+
+          // دکمه خروجی اکسل
+          setupListener("mainExportArchiveExcelBtn", "click", () => {
+              console.log("📊 درخواست خروجی اکسل مودال اصلی...");
+              const month = parseInt(document.getElementById("mainArchiveMonth").value);
+              const year = parseInt(document.getElementById("mainArchiveYear").value);
+              
+              if (!year || !month) {
+                  this.showNotification("❌ لطفا ابتدا ماه و سال را برای خروجی انتخاب کنید", "error");
+                  return;
+              }
+              // 🔥🔥 فراخوانی تابع جدید خروجی
+              this.exportMainArchiveToExcel(month, year);
+          });
+          
         } catch (filterError) {
           console.error("❌ خطا در پر کردن فیلترهای آرشیو:", filterError);
           this.showNotification("❌ خطا در تنظیم فیلترهای آرشیو", "error");
-
-          // تلاش مجدد
-          setTimeout(() => {
-            this.populateArchiveFilters();
-          }, 500);
         }
       }, 100);
     } catch (error) {
@@ -13477,31 +13544,135 @@ updateStats() {
     }
   }
 
+  // 🟢 کد جدید
+  // این تابع جدید را به کلاس AttendanceApp خود اضافه کنید
+
+  // صادرات آرشیو (نسخه مخصوص مودال اصلی)
+  exportMainArchiveToExcel(month, year) {
+    const monthNames = [
+      "فروردین",
+      "اردیبهشت",
+      "خرداد",
+      "تیر",
+      "مرداد",
+      "شهریور",
+      "مهر",
+      "آبان",
+      "آذر",
+      "دی",
+      "بهمن",
+      "اسفند",
+    ];
+
+    // فیلتر کردن رکوردها بر اساس ماه و سال شمسی انتخاب شده
+    const day = parseInt(document.getElementById("mainArchiveDay").value);
+    
+    const filteredRecords = this.records.filter((record) => {
+      try {
+          const jalaliDate = toJalaliDate(record.date).split("/");
+          const recordYear = parseInt(jalaliDate[0]);
+          const recordMonth = parseInt(jalaliDate[1]);
+          const recordDay = parseInt(jalaliDate[2]);
+
+          const yearMatch = !year || recordYear === year;
+          const monthMatch = !month || recordMonth === month;
+          const dayMatch = !day || recordDay === day;
+          
+          return yearMatch && monthMatch && dayMatch;
+      } catch (e) {
+          return false;
+      }
+    });
+
+
+    // گروه‌بندی رکوردها بر اساس تاریخ
+    const dailyRecords = {};
+
+    filteredRecords.forEach((record) => {
+      const jalaliDateStr = toJalaliDate(record.date);
+      if (!dailyRecords[jalaliDateStr]) {
+        dailyRecords[jalaliDateStr] = [];
+      }
+      dailyRecords[jalaliDateStr].push(record);
+    });
+
+    // ایجاد داده برای اکسل
+    const data = [
+      [
+        "تاریخ",
+        "ساعت ورود",
+        "ساعت خروج",
+        "ساعات کار",
+        "اضافه کاری",
+        "درآمد روز",
+      ],
+    ];
+
+    Object.keys(dailyRecords)
+      .sort()
+      .forEach((date) => {
+        const dayRecords = dailyRecords[date];
+        const dayData = this.calculateDayData(dayRecords, dayRecords[0].date);
+
+        data.push([
+          date, // تاریخ شمسی است
+          dayData.firstIn ? this.formatTime(dayData.firstIn) : "-",
+          dayData.lastOut ? this.formatTime(dayData.lastOut) : "-",
+          dayData.totalHours.toFixed(2),
+          dayData.overtimeHours.toFixed(2),
+          dayData.dailyIncome.toLocaleString(),
+        ]);
+      });
+
+    const ws = XLSX.utils.aoa_to_sheet(data);
+    const wb = XLSX.utils.book_new();
+    
+    let sheetName = `آرشیو ${monthNames[month - 1]} ${year}`;
+    if (day) {
+        sheetName = `آرشیو ${day} ${monthNames[month - 1]} ${year}`;
+    }
+
+    XLSX.utils.book_append_sheet(
+      wb,
+      ws,
+      sheetName
+    );
+
+    XLSX.writeFile(wb, `attendance-archive-${year}-${month}${day ? '-' + day : ''}.xlsx`);
+    this.showNotification("✅ خروجی اکسل با موفقیت ایجاد شد", "success");
+  }
+// 🟢 کد اصلاح شده
   // 🔧 جایگزین تابع populateArchiveFilters با این نسخه اصلاح شده
   populateArchiveFilters() {
     try {
-      console.log("🔄 پر کردن فیلترهای آرشیو...");
+      console.log("🔄 پر کردن فیلترهای آرشیو اصلی...");
 
       // کمی تاخیر برای اطمینان از لود کامل DOM
       setTimeout(() => {
-        const monthSelect = document.getElementById("archiveMonth");
-        const yearSelect = document.getElementById("archiveYear");
-        const daySelect = document.getElementById("archiveDay");
+        // 🔥 استفاده از IDهای جدید
+        const monthSelect = document.getElementById("mainArchiveMonth");
+        const yearSelect = document.getElementById("mainArchiveYear");
+        const daySelect = document.getElementById("mainArchiveDay");
 
         // 🔥 بررسی ایمن وجود المان‌ها
         if (!monthSelect || !yearSelect || !daySelect) {
-          console.error("❌ المان‌های فیلتر آرشیو پیدا نشدند:", {
+          console.error("❌ المان‌های فیلتر مودال اصلی آرشیو پیدا نشدند:", {
             month: !!monthSelect,
             year: !!yearSelect,
             day: !!daySelect,
           });
-
+          
+          if (!document.getElementById("archiveModal")?.style.display || document.getElementById("archiveModal").style.display === 'none') {
+             console.warn("مودال آرشیو هنوز باز نشده، تلاش مجدد لغو شد.");
+             return;
+          }
+          
           // تلاش مجدد پس از تاخیر
           setTimeout(() => this.populateArchiveFilters(), 500);
           return;
         }
 
-        console.log("✅ المان‌های فیلتر پیدا شدند");
+        console.log("✅ المان‌های فیلتر اصلی پیدا شدند");
 
         // پاک کردن گزینه‌های قبلی
         monthSelect.innerHTML = "";
@@ -13591,32 +13762,16 @@ updateStats() {
         const currentJalaliDate = this.getCurrentJalaliDate();
         monthSelect.value = currentJalaliDate.month;
         yearSelect.value = currentJalaliDate.year;
-        daySelect.value = "";
+        daySelect.value = ""; // روز را خالی بگذار
 
-        console.log("✅ فیلترهای آرشیو با موفقیت پر شدند");
+        console.log("✅ فیلترهای مودال اصلی آرشیو با موفقیت پر شدند");
       }, 100);
     } catch (error) {
-      console.error("❌ خطا در پر کردن فیلترهای آرشیو:", error);
+      console.error("❌ خطا در پر کردن فیلترهای مودال اصلی آرشیو:", error);
       // تلاش مجدد پس از 1 ثانیه
       setTimeout(() => this.populateArchiveFilters(), 1000);
     }
   }
-
-  // تابع کمکی برای گرفتن سال شمسی جاری
-  getCurrentJalaliYear() {
-    const currentDate = new Date();
-    try {
-      const jalaliDate = toJalaliDate(
-        currentDate.toISOString().split("T")[0]
-      ).split("/");
-      return parseInt(jalaliDate[0]);
-    } catch (error) {
-      // فال‌بک: محاسبه تقریبی سال شمسی
-      const gregorianYear = currentDate.getFullYear();
-      return gregorianYear - 621; // تبدیل تقریبی به شمسی
-    }
-  }
-
   // تابع کمکی برای گرفتن تاریخ شمسی جاری
   getCurrentJalaliDate() {
     const currentDate = new Date();
@@ -14168,21 +14323,42 @@ updateStats() {
     });
   }
 
+// 🟢 کد اصلاح شده
   // بارگذاری داده‌های آرشیو - نسخه اصلاح شده
   loadArchiveData() {
-    const month = parseInt(document.getElementById("archiveMonth").value);
-    const year = parseInt(document.getElementById("archiveYear").value);
+    // 🔥 استفاده از IDهای جدید
+    const month = parseInt(document.getElementById("mainArchiveMonth").value);
+    const year = parseInt(document.getElementById("mainArchiveYear").value);
+    const day = parseInt(document.getElementById("mainArchiveDay").value); // 🔥 فیلتر روز اضافه شد
 
     // فیلتر کردن رکوردها بر اساس ماه و سال شمسی انتخاب شده
     const filteredRecords = this.records.filter((record) => {
-      const jalaliDate = toJalaliDate(record.date).split("/");
-      const recordYear = parseInt(jalaliDate[0]);
-      const recordMonth = parseInt(jalaliDate[1]);
-      return recordYear === year && recordMonth === month;
+      try {
+          const jalaliDate = toJalaliDate(record.date).split("/");
+          const recordYear = parseInt(jalaliDate[0]);
+          const recordMonth = parseInt(jalaliDate[1]);
+          const recordDay = parseInt(jalaliDate[2]);
+          
+          // 🔥 منطق فیلتر بهبود یافته: اگر فیلتری انتخاب نشده (مقدار "" یا NaN)، آن را نادیده بگیر
+          const yearMatch = !year || recordYear === year;
+          const monthMatch = !month || recordMonth === month;
+          const dayMatch = !day || recordDay === day; // 🔥 اعمال فیلتر روز
+          
+          return yearMatch && monthMatch && dayMatch;
+      } catch (e) {
+          return false; // در صورت خطا در تبدیل تاریخ، رکورد را نادیده بگیر
+      }
     });
 
     // نمایش داده‌ها در جدول آرشیو
-    const tbody = document.querySelector("#archiveTable tbody");
+    // 🔥 استفاده از ID جدول جدید
+    const tbody = document.querySelector("#mainArchiveTable tbody");
+    
+    if (!tbody) {
+        console.error("❌ tbody جدول مودال اصلی آرشیو (#mainArchiveTable tbody) پیدا نشد!");
+        return;
+    }
+    
     tbody.innerHTML = "";
 
     // گروه‌بندی رکوردها بر اساس تاریخ شمسی
@@ -14210,41 +14386,17 @@ updateStats() {
         let dayHours = 0;
         let i = 0;
 
-        while (i < dayRecords.length) {
-          if (
-            dayRecords[i].type === "in" &&
-            i + 1 < dayRecords.length &&
-            dayRecords[i + 1].type === "out"
-          ) {
-            const inTime = dayRecords[i].time;
-            const outTime = dayRecords[i + 1].time;
-
-            const hours = this.calculateWorkHours(inTime, outTime);
-            dayHours += hours;
-
-            if (!firstIn) firstIn = this.formatTime(dayRecords[i].time);
-            lastOut = this.formatTime(dayRecords[i + 1].time);
-
-            i += 2;
-          } else {
-            i++;
-          }
-        }
-
-        const normalHours = Math.min(dayHours, this.settings.dailyHours);
-        const overtimeHours = Math.max(dayHours - this.settings.dailyHours, 0);
-        const dayIncome =
-          normalHours * this.settings.hourlyRate +
-          overtimeHours * this.settings.overtimeRate;
+        // 🔥 استفاده از تابع محاسبه روزانه برای دقت بیشتر
+        const dayData = this.calculateDayData(dayRecords, dayRecords[0].date);
 
         const row = document.createElement("tr");
         row.innerHTML = `
             <td>${date}</td>
-            <td>${firstIn || "-"}</td>
-            <td>${lastOut || "-"}</td>
-            <td>${dayHours.toFixed(2)}</td>
-            <td>${overtimeHours.toFixed(2)}</td>
-            <td>${this.formatCurrency(dayIncome)}</td>
+            <td>${dayData.firstIn ? this.formatTime(dayData.firstIn) : "-"}</td>
+            <td>${dayData.lastOut ? this.formatTime(dayData.lastOut) : "-"}</td>
+            <td>${dayData.totalHours.toFixed(2)}</td>
+            <td>${dayData.overtimeHours.toFixed(2)}</td>
+            <td>${this.formatCurrency(dayData.dailyIncome)}</td>
         `;
         tbody.appendChild(row);
       });
