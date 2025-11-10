@@ -2725,55 +2725,51 @@ flex-direction: row;
             </form>
         </div>
     </div>
-
-    <!-- مودال آرشیو -->
-    <div class="modal" id="archiveModal">
-        <div class="modal-content">
-            <div class="modal-header">
-                <h2 class="modal-title">آرشیو و گزارش‌ها</h2>
-                <button class="close-modal">&times;</button>
-            </div>
-            <div class="form-group">
-                <label class="form-label" for="archiveMonth">ماه</label>
-                <select class="form-control" id="archiveMonth">
-                    <!-- گزینه‌های ماه اینجا لود می‌شوند -->
+<!--مودال آرشیو-->
+<div class="modal" id="archiveModal">
+    <div class="modal-content">
+        <div class="modal-header">
+            <h2 class="modal-title">آرشیو و گزارش‌ها</h2>
+            <button class="close-modal">&times;</button>
+        </div>
+        <div class="form-group">
+            <label class="form-label" for="mainArchiveMonth">ماه</label>
+            <select class="form-control" id="mainArchiveMonth">
                 </select>
-            </div>
-            <div class="form-group">
-                <label class="form-label" for="archiveYear">سال</label>
-                <select class="form-control" id="archiveYear">
-                    <!-- گزینه‌های سال اینجا لود می‌شوند -->
+        </div>
+        <div class="form-group">
+            <label class="form-label" for="mainArchiveYear">سال</label>
+            <select class="form-control" id="mainArchiveYear">
                 </select>
-            </div>
-            <div class="form-group">
-                <label class="form-label" for="archiveDay">روز</label>
-                <select class="form-control" id="archiveDay">
-                    </select>
-            </div> 
-            <div class="table-container">
-                <table id="archiveTable">
-                    <thead>
-                        <tr>
-                            <th>تاریخ</th>
-                            <th>ساعت ورود</th>
-                            <th>ساعت خروج</th>
-                            <th>ساعات کار</th>
-                            <th>اضافه‌کاری</th>
-                            <th>درآمد روز</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        <!-- داده‌های آرشیو اینجا لود می‌شوند -->
+        </div>
+        <div class="form-group">
+            <label class="form-label" for="mainArchiveDay">روز</label>
+            <select class="form-control" id="mainArchiveDay">
+            </select>
+        </div>
+        <div class="table-container">
+            <table id="mainArchiveTable">
+                <thead>
+                    <tr>
+                        <th>تاریخ</th>
+                        <th>ساعت ورود</th>
+                        <th>ساعت خروج</th>
+                        <th>ساعات کار</th>
+                        <th>اضافه‌کاری</th>
+                        <th>درآمد روز</th>
+                    </tr>
+                </thead>
+                <tbody>
                     </tbody>
-                </table>
-            </div>
-            <div class="action-buttons">
-                <button class="btn btn-primary" id="exportArchiveExcelBtn">
-                    <i class="fas fa-file-excel"></i> خروجی Excel
-                </button>
-            </div>
+            </table>
+        </div>
+        <div class="action-buttons">
+            <button class="btn btn-primary" id="mainExportArchiveExcelBtn">
+                <i class="fas fa-file-excel"></i> خروجی Excel
+            </button>
         </div>
     </div>
+</div>
 
     <!-- نوتیفیکیشن -->
     <div class="notification" id="notification">
